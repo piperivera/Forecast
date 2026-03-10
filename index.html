@@ -195,10 +195,83 @@ tr:hover td{background:rgba(255,255,255,.015)}
 <!-- Microsoft Authentication Library -->
 <script>
 // ══════════════════════════════════════
-//   AUTENTICACIÓN POR EMAIL
+//   AUTENTICACIÓN MICROSOFT 365 + MSAL
 // ══════════════════════════════════════
 
 var CURRENT_USER = null;
+var SP_TOKEN     = null;
+var msalApp      = null;
+
+const AZURE_CONFIG = {
+  clientId:  '4a2b9726-2736-4f72-9e7e-c64cfdc80253',
+  tenantId:  'e6805558-f5bb-444c-8af2-5f3a4d6dd3fc',
+  redirectUri: 'https://piperivera.github.io/FORESCAST/',
+  siteUrl:   'https://provexpress.sharepoint.com/sites/ProvexpressIntranet',
+  driveBase: 'Documentos compartidos/COMERCIAL/FORECAST 2026',
+};
+
+function initMsalApp() {
+  if(typeof msal === 'undefined') return false;
+  if(msalApp) return true;
+  msalApp = new msal.PublicClientApplication({
+    auth: {
+      clientId:    AZURE_CONFIG.clientId,
+      authority:   'https://login.microsoftonline.com/' + AZURE_CONFIG.tenantId,
+      redirectUri: AZURE_CONFIG.redirectUri,
+    },
+    cache: { cacheLocation: 'sessionStorage' }
+  });
+  return true;
+}
+
+function loadMSAL(callback) {
+  if(typeof msal !== 'undefined') { callback(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js';
+  s.onload = () => callback();
+  s.onerror = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+    s2.onload = () => callback();
+    s2.onerror = () => { console.error('[MSAL] Failed'); callback(); };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+}
+
+async function getToken(scopes) {
+  const accounts = msalApp.getAllAccounts();
+  if(!accounts.length) throw new Error('No session');
+  try {
+    const r = await msalApp.acquireTokenSilent({ scopes, account: accounts[0] });
+    return r.accessToken;
+  } catch {
+    const r = await msalApp.acquireTokenPopup({ scopes });
+    return r.accessToken;
+  }
+}
+
+async function spLogin() {
+  if(!initMsalApp()) throw new Error('MSAL no disponible');
+  await msalApp.handleRedirectPromise();
+  let account = msalApp.getAllAccounts()[0];
+  if(!account) {
+    await msalApp.loginPopup({ scopes: ['User.Read'] });
+    account = msalApp.getAllAccounts()[0];
+  }
+  const token = await getToken(['User.Read']);
+  const res   = await fetch('https://graph.microsoft.com/v1.0/me', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const profile = await res.json();
+  const email   = (profile.mail || profile.userPrincipalName || '').toLowerCase();
+  const { role, directorGroup } = getUserRole(email);
+  CURRENT_USER = { email, name: profile.displayName, role, directorGroup };
+  SP_TOKEN = await getToken(['https://provexpress.sharepoint.com/AllSites.Read']);
+  sessionStorage.setItem('forecast_user', JSON.stringify(CURRENT_USER));
+  console.log('[AUTH]', email, role);
+  return true;
+}
 
 const ROLES = {
   gerencia: [
@@ -1901,12 +1974,139 @@ function buildTable(data){
 
 
 
-function loadFolderFromSharePoint() {
-  if(!CURRENT_USER) {
-    showLoginScreen();
+async function loadFolderFromSharePoint() {
+  // Cargar MSAL
+  await new Promise(r => loadMSAL(r));
+  if(!initMsalApp()) {
+    alert('No se pudo cargar autenticación'); return;
+  }
+  showLoadingOverlay('Conectando con Microsoft 365...');
+  try {
+    await spLogin();
+  } catch(e) {
+    hideLoadingOverlay();
+    alert('Error de autenticación: ' + e.message);
     return;
   }
-  document.getElementById('folder-input').click();
+  updateLoadingStatus('Cargando archivos de SharePoint...');
+  try {
+    const siteId = await getSiteId();
+    const { role, directorGroup } = CURRENT_USER;
+    ALL_DATA = [];
+    LOADED_FILES_BY_DIR = {};
+
+    if(role === 'ejecutivo') {
+      await loadEjecutivoFile(siteId);
+    } else if(role === 'director') {
+      const folder = directorGroup.includes('Miller') ? 'Gupo Miller Romero' : 'Grupo ' + directorGroup;
+      await loadDirectorFolder(siteId, folder);
+    } else {
+      // Gerencia — todas las carpetas
+      const folders = ['Grupo Juan David Novoa','Grupo Maria Angelica Caballero','Grupo Oscar Beltran','Gupo Miller Romero'];
+      for(const f of folders) await loadDirectorFolder(siteId, f);
+    }
+    finalizeLoad();
+    hideLoadingOverlay();
+  } catch(e) {
+    hideLoadingOverlay();
+    console.error(e);
+    alert('Error cargando datos: ' + e.message);
+  }
+}
+
+let _siteId = null;
+async function getSiteId() {
+  if(_siteId) return _siteId;
+  const token = await getToken(['https://provexpress.sharepoint.com/AllSites.Read']);
+  const r = await fetch('https://graph.microsoft.com/v1.0/sites/provexpress.sharepoint.com:/sites/ProvexpressIntranet', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const d = await r.json();
+  if(!d.id) throw new Error('Site ID no encontrado');
+  _siteId = d.id;
+  return _siteId;
+}
+
+async function loadDirectorFolder(siteId, folderName) {
+  const path = AZURE_CONFIG.driveBase + '/' + folderName;
+  const token = await getToken(['https://provexpress.sharepoint.com/AllSites.Read']);
+  updateLoadingStatus('Cargando: ' + folderName + '...');
+  const r = await fetch(
+    'https://graph.microsoft.com/v1.0/sites/' + siteId + '/drive/root:/' + encodeURIComponent(path) + ':/children?$top=50',
+    { headers: { Authorization: 'Bearer ' + token } }
+  );
+  const d = await r.json();
+  if(!d.value) { console.warn('Sin archivos en', folderName, d); return; }
+  const dirName = folderName.replace(/^(Grupo|Gupo)\s+/i,'').trim();
+  if(!LOADED_FILES_BY_DIR[dirName]) LOADED_FILES_BY_DIR[dirName] = [];
+  for(const item of d.value) {
+    if(!item.name.match(/\.xlsx?$/i)) continue;
+    if(item.name.startsWith('~$')) continue;
+    if(item.name.toLowerCase().includes('base de datos')) continue;
+    updateLoadingStatus('Leyendo: ' + item.name);
+    const recs = await loadSpFile(item, dirName);
+    ALL_DATA.push(...recs);
+    LOADED_FILES_BY_DIR[dirName].push({ name: item.name });
+  }
+}
+
+async function loadEjecutivoFile(siteId) {
+  const folders = ['Grupo Juan David Novoa','Grupo Maria Angelica Caballero','Grupo Oscar Beltran','Gupo Miller Romero'];
+  for(const folder of folders) {
+    const path = AZURE_CONFIG.driveBase + '/' + folder;
+    const token = await getToken(['https://provexpress.sharepoint.com/AllSites.Read']);
+    try {
+      const r = await fetch(
+        'https://graph.microsoft.com/v1.0/sites/' + siteId + '/drive/root:/' + encodeURIComponent(path) + ':/children?$top=50',
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      const d = await r.json();
+      if(!d.value) continue;
+      const file = d.value.find(f => f.name.toLowerCase().replace(/\.xlsx?$/i,'').trim() === CURRENT_USER.name.toLowerCase().trim());
+      if(file) {
+        const dirName = folder.replace(/^(Grupo|Gupo)\s+/i,'').trim();
+        if(!LOADED_FILES_BY_DIR[dirName]) LOADED_FILES_BY_DIR[dirName] = [];
+        const recs = await loadSpFile(file, dirName);
+        ALL_DATA.push(...recs);
+        LOADED_FILES_BY_DIR[dirName].push({ name: file.name });
+        return;
+      }
+    } catch(e) { continue; }
+  }
+}
+
+async function loadSpFile(item, dirName) {
+  const url = item['@microsoft.graph.downloadUrl'];
+  if(!url) return [];
+  try {
+    const buf = await (await fetch(url)).arrayBuffer();
+    const wb  = XLSX.read(buf, { type:'array', cellDates:true });
+    const wsName = wb.SheetNames.find(s=>s.includes('Gerencia')||s.includes('Comercial'))||wb.SheetNames[0];
+    const ws  = wb.Sheets[wsName];
+    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+    let hdrIdx = -1;
+    for(let i=0;i<raw.length;i++) { if(raw[i]&&raw[i].some(c=>c&&String(c).includes('CLIENTE'))){ hdrIdx=i; break; } }
+    if(hdrIdx<0) return [];
+    const KEY_MAP = {'VENTA CLIENTE':'MONTO VENTA CLIENTE','MONEDA':'MONEDA 2','FECHA':'FECHA DIA/MES/AÑO','TRM':'TRM REFERENCIA','LINEA':'LINEA DE PRODUCTO'};
+    const hdrs = raw[hdrIdx].map(h=>h?KEY_MAP[String(h).trim()]||String(h).trim():'');
+    const toTitle = s => s?String(s).replace(/^[' ]+/,'').trim().replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()):'';
+    const fileExec = toTitle(item.name.replace(/\.xlsx?$/i,'').trim());
+    const recs = [];
+    for(let i=hdrIdx+1;i<raw.length;i++) {
+      const row=raw[i]; if(!row[1]) continue;
+      const rec={};
+      hdrs.forEach((h,j)=>{ if(h) rec[h]=row[j]!==undefined?row[j]:null; });
+      rec['DIRECTOR']  = toTitle(dirName);
+      rec['COMERCIAL'] = fileExec;
+      recs.push(rec);
+    }
+    const consulta = wb.Sheets['Consulta1'];
+    if(consulta) {
+      const cData = XLSX.utils.sheet_to_json(consulta,{header:1,defval:null});
+      if(cData[1]&&cData[1][0]){ const t=parseFloat(cData[1][0]); if(t>100) window._lastTRM=t; }
+    }
+    return recs;
+  } catch(e) { console.warn('Error leyendo', item.name, e); return []; }
 }
 
 // ── Tabs por rol ─────────────────────────────
@@ -1941,10 +2141,14 @@ function applyRoleTabs() {
 
 // ── Auto-cargar al abrir desde SharePoint ────
 window.addEventListener('DOMContentLoaded', () => {
-  // Restaurar sesión o mostrar login
-  if(!restoreSession()) {
-    showLoginScreen();
-  }
+  // Pre-cargar MSAL
+  loadMSAL(() => {
+    initMsalApp();
+    // Auto-login si hay sesión activa
+    if(msalApp && msalApp.getAllAccounts().length > 0) {
+      loadFolderFromSharePoint();
+    }
+  });
 });
 
 </script>
