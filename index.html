@@ -390,6 +390,15 @@ svg rect[title]:hover{opacity:.75;filter:brightness(1.2)}
 
 /* Loading overlay text */
 #loading-status{font-size:12px;color:var(--text2);font-family:var(--font-body);text-align:center;max-width:320px}
+
+.view-opt-btn{
+  width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;color:var(--text3);font-family:var(--font-display);font-size:11px;
+  font-weight:600;letter-spacing:.3px;cursor:pointer;text-align:left;
+  transition:var(--transition);
+}
+.view-opt-btn:hover{background:rgba(45,79,214,.1);border-color:var(--corp-blue2);color:var(--text)}
+.view-opt-btn.active{background:rgba(45,79,214,.15);border-color:var(--corp-blue2);color:#fff}
 </style>
 <!-- Microsoft Authentication Library -->
 <script>
@@ -477,6 +486,7 @@ const ROLES = {
     'juannovoa@provexpress.com.co',
     'c.estrategica@provexpress.com.co',
     'especialista.preventa@provexpress.com.co',
+    'preventa.software@provexpress.com.co',
   ],
   directores: {
     'juannovoa@provexpress.com.co':          'Juan David Novoa',
@@ -593,6 +603,44 @@ function showUserBadge() {
   const rb = document.getElementById('user-role-badge');
   const roleLabels = {gerencia:'Gerencia',gerencia_director:'Gerencia · Director',director:'Director',ejecutivo:'Ejecutivo'};
   if(rb) rb.textContent = roleLabels[CURRENT_USER.role]||CURRENT_USER.role;
+  // Mostrar botón de cambio de vista solo para especialista.preventa
+  const gearBtn = document.getElementById('view-switcher-btn');
+  if(gearBtn && CURRENT_USER.email === 'especialista.preventa@provexpress.com.co') {
+    gearBtn.style.display = 'block';
+  }
+}
+
+function toggleViewPanel() {
+  const panel = document.getElementById('view-panel');
+  if(!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close view panel clicking outside
+document.addEventListener('click', e => {
+  const panel = document.getElementById('view-panel');
+  const btn   = document.getElementById('view-switcher-btn');
+  if(panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
+function switchView(role, directorGroup) {
+  // Override CURRENT_USER view without changing real identity
+  const prev = CURRENT_USER;
+  CURRENT_USER = { ...prev, role, directorGroup: directorGroup||null };
+  applyRoleTabs();
+  renderAll();
+  // Update role badge
+  const rb = document.getElementById('user-role-badge');
+  const roleLabels = {gerencia:'Gerencia',director:'Director',ejecutivo:'Ejecutivo'};
+  if(rb) rb.textContent = (roleLabels[role]||role) + (directorGroup ? ' · '+directorGroup.split(' ')[0] : '') + ' ⚙';
+  // Highlight active button
+  document.querySelectorAll('.view-opt-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  // Close panel
+  const panel = document.getElementById('view-panel');
+  if(panel) panel.style.display = 'none';
 }
 
 // Restaurar sesión si ya inició sesión antes
@@ -661,11 +709,27 @@ function hideLoadingOverlay(){ const ov=document.getElementById('load-overlay');
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       <span id="btn-reload-txt">🔄 Cargar datos</span>
     </button>
-    <div id="user-badge" style="display:none;align-items:center;gap:8px;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border)">
+    <div id="user-badge" style="display:none;align-items:center;gap:8px;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);position:relative">
       <div id="user-avatar" style="width:26px;height:26px;border-radius:50%;background:var(--corp-blue2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:10px;font-weight:700;color:#fff"></div>
       <div>
         <div id="user-name" style="font-size:10px;font-family:var(--font-display);font-weight:700;color:var(--text)"></div>
         <div id="user-role-badge" style="font-size:9px;color:var(--text2)"></div>
+      </div>
+      <!-- Botón de vista (solo para especialista.preventa) -->
+      <button id="view-switcher-btn" onclick="toggleViewPanel()" style="display:none;margin-left:4px;background:rgba(107,63,160,.2);border:1px solid rgba(107,63,160,.4);color:var(--corp-purple2);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px;transition:var(--transition)" title="Cambiar vista">⚙</button>
+    </div>
+
+    <!-- Panel de cambio de vista -->
+    <div id="view-panel" style="display:none;position:fixed;top:70px;right:16px;z-index:500;background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:16px;min-width:220px;box-shadow:var(--shadow-lg)">
+      <div style="font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text2);margin-bottom:12px;text-transform:uppercase">Vista activa</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="switchView('gerencia')" class="view-opt-btn" data-view="gerencia">👑 Gerencia General</button>
+        <button onclick="switchView('director','Juan David Novoa')" class="view-opt-btn" data-view="dir-jd">📊 Director — Juan David</button>
+        <button onclick="switchView('director','Maria Angelica Caballero')" class="view-opt-btn" data-view="dir-ma">📊 Director — María Angélica</button>
+        <button onclick="switchView('director','Oscar Beltran')" class="view-opt-btn" data-view="dir-ob">📊 Director — Oscar Beltrán</button>
+        <button onclick="switchView('director','Miller Romero')" class="view-opt-btn" data-view="dir-mr">📊 Director — Miller Romero</button>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+        <button onclick="switchView('ejecutivo','Angela')" class="view-opt-btn" data-view="ej">👤 Ejecutivo (demo)</button>
       </div>
     </div>
     <input type="file" id="folder-input" webkitdirectory mozdirectory directory style="display:none">
@@ -689,6 +753,15 @@ function hideLoadingOverlay(){ const ov=document.getElementById('load-overlay');
 <div class="page active" id="page-gerencia">
   <div id="upload-zone-g" class="upload-zone" onclick="document.getElementById('folder-input').click()">
     <div class="upload-icon">🗂️</div>
+<div id="reload-bar" style="display:none;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(27,43,140,.15),rgba(107,63,160,.08));border:1px solid rgba(107,63,160,.2);border-radius:12px;padding:14px 20px;margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--corp-green);box-shadow:0 0 8px var(--corp-green);animation:pulse 2s infinite"></div>
+    <span id="reload-info" style="font-family:var(--font-display);font-size:11px;color:var(--text2);letter-spacing:.5px">Datos cargados</span>
+  </div>
+  <button onclick="loadFolderFromSharePoint()" style="display:flex;align-items:center;gap:6px;padding:7px 16px;background:rgba(45,79,214,.15);border:1px solid rgba(45,79,214,.3);color:var(--corp-blue2);border-radius:8px;font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.8px;cursor:pointer;transition:var(--transition);" onmouseover="this.style.background='rgba(45,79,214,.25)'" onmouseout="this.style.background='rgba(45,79,214,.15)'">
+    ↺ RECARGAR DATOS
+  </button>
+</div>
     <div class="upload-title">Selecciona la carpeta FORECAST 2026</div>
     <div class="upload-sub">
       Haz clic aquí o arrastra la carpeta raíz del forecast<br>
@@ -1350,6 +1423,17 @@ document.getElementById('trm-input').addEventListener('input',function(){
 });
 
 function finalizeLoad(){
+  // Ocultar zona de carga, mostrar solo botón reload
+  const uz = document.getElementById('upload-zone-g');
+  if(uz) uz.style.display = 'none';
+  const reloadBar = document.getElementById('reload-bar');
+  if(reloadBar) reloadBar.style.display = 'flex';
+  const reloadInfo = document.getElementById('reload-info');
+  if(reloadInfo) {
+    const nFiles = Object.values(LOADED_FILES_BY_DIR).reduce((s,a)=>s+a.length,0);
+    const nDirs = Object.keys(LOADED_FILES_BY_DIR).length;
+    reloadInfo.textContent = nFiles + ' archivos cargados · ' + nDirs + ' equipos · Última carga: ' + new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  }
   // Si los Excel traían TRM, aplicarla al input
   if(window._lastTRM && window._lastTRM > 100){
     document.getElementById('trm-input').value = window._lastTRM;
@@ -2464,13 +2548,11 @@ function applyRoleTabs() {
 window.addEventListener('DOMContentLoaded', () => {
   // Cargar TRM automáticamente
   fetchTRM();
-  // Pre-cargar MSAL
+  // Pre-cargar MSAL y auto-login siempre
   loadMSAL(() => {
     initMsalApp();
-    // Auto-login si hay sesión activa
-    if(msalApp && msalApp.getAllAccounts().length > 0) {
-      loadFolderFromSharePoint();
-    }
+    // Auto-cargar siempre al abrir
+    loadFolderFromSharePoint();
   });
 });
 
