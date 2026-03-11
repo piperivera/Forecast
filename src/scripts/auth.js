@@ -6,24 +6,24 @@ var CURRENT_USER = null;
 var SP_TOKEN     = null;
 var msalApp      = null;
 
-if(!window.AZURE_CONFIG){
-  window.AZURE_CONFIG = {
-    clientId:  '4a2b9726-2736-4f72-9e7e-c64cfdc80253',
-    tenantId:  'e6805558-f5bb-444c-8af2-5f3a4d6dd3fc',
-    redirectUri: 'https://piperivera.github.io/ForeCast/',
-    siteUrl:   'https://provexpress.sharepoint.com/sites/ProvexpressIntranet',
-    driveBase: 'Documentos compartidos/COMERCIAL/FORECAST 2026',
-  };
-}
+var AZURE_CONFIG = window.AZURE_CONFIG || {
+const AZURE_CONFIG = {
+  clientId:  '4a2b9726-2736-4f72-9e7e-c64cfdc80253',
+  tenantId:  'e6805558-f5bb-444c-8af2-5f3a4d6dd3fc',
+  redirectUri: 'https://piperivera.github.io/ForeCast/',
+  siteUrl:   'https://provexpress.sharepoint.com/sites/ProvexpressIntranet',
+  driveBase: 'Documentos compartidos/COMERCIAL/FORECAST 2026',
+};
+window.AZURE_CONFIG = AZURE_CONFIG;
 
 function initMsalApp() {
   if(typeof msal === 'undefined') return false;
   if(msalApp) return true;
   msalApp = new msal.PublicClientApplication({
     auth: {
-      clientId:    window.AZURE_CONFIG.clientId,
-      authority:   'https://login.microsoftonline.com/' + window.AZURE_CONFIG.tenantId,
-      redirectUri: window.AZURE_CONFIG.redirectUri,
+      clientId:    AZURE_CONFIG.clientId,
+      authority:   'https://login.microsoftonline.com/' + AZURE_CONFIG.tenantId,
+      redirectUri: AZURE_CONFIG.redirectUri,
     },
     cache: { cacheLocation: 'sessionStorage' }
   });
