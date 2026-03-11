@@ -60,6 +60,38 @@ function abr(v){
   return '$ '+Math.round(v).toLocaleString('es-CO');
 }
 
+function normalizePersonName(v){
+  return (v||'')
+    .toString()
+    .replace(/\.(xlsx|xls)$/i,'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function namesMatch(a,b){
+  const na = normalizePersonName(a);
+  const nb = normalizePersonName(b);
+  if(!na || !nb) return false;
+  if(na === nb) return true;
+
+  // Permite casos como "dayana chala" vs "dayana chala perez"
+  if((na.includes(nb) || nb.includes(na)) && Math.min(na.length, nb.length) >= 8) {
+    return true;
+  }
+
+  const ta = [...new Set(na.split(' ').filter(Boolean))];
+  const tb = [...new Set(nb.split(' ').filter(Boolean))];
+  const common = ta.filter(t => tb.includes(t));
+
+  if(common.length >= 2) return true;
+  if(common.length === 1 && (ta.length === 1 || tb.length === 1) && common[0].length >= 5) return true;
+
+  return false;
+}
+
 /* Get TRM */
 function getTRM(){return parseFloat(document.getElementById('trm-input').value)||4150;}
 
@@ -411,6 +443,13 @@ function finalizeLoad(){
   const hs = document.getElementById('hoy-strip');
   if(hs) hs.style.display='block';
 
+  // Status header (según visibilidad del rol)
+  const visibleData = getVisibleData();
+  const dirs=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
+  const execs=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
+  const execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
+  document.getElementById('file-count-hd').textContent=
+    visibleData.length+' negocios · '+dirs.length+' dir · '+execsWithData.length+' ejecutivos con datos';
   // Status header
   const dirs=[...new Set(ALL_DATA.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
   const execs=[...new Set(ALL_DATA.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
@@ -438,6 +477,7 @@ function finalizeLoad(){
   // Populate selects
   const selDir=document.getElementById('sel-director');
   const dirsForSel=[...new Set([
+    ...visibleData.map(r=>(r['DIRECTOR']||'').trim()),
     ...ALL_DATA.map(r=>(r['DIRECTOR']||'').trim()),
     ...Object.keys(LOADED_FILES_BY_DIR||{}).map(d=>d.trim())
   ].filter(Boolean))].sort();
@@ -459,6 +499,7 @@ function getVisibleData() {
     return ALL_DATA.filter(r => (r['DIRECTOR']||'').trim() === (directorGroup||'').trim());
   }
   if(role === 'ejecutivo') {
+    return ALL_DATA.filter(r => namesMatch(r['COMERCIAL'], name));
     return ALL_DATA.filter(r => (r['COMERCIAL']||'').trim().toLowerCase() === (name||'').trim().toLowerCase());
   }
   return ALL_DATA; // gerencia ve todo
@@ -1431,6 +1472,7 @@ async function loadEjecutivoFile(siteId) {
       );
       const d = await r.json();
       if(!d.value) continue;
+      const file = d.value.find(f => namesMatch(f.name, CURRENT_USER.name));
       const file = d.value.find(f => f.name.toLowerCase().replace(/\.xlsx?$/i,'').trim() === CURRENT_USER.name.toLowerCase().trim());
       if(file) {
         const dirName = folder.replace(/^(Grupo|Gupo)\s+/i,'').trim();
@@ -1496,10 +1538,13 @@ function applyRoleTabs() {
   if(role === 'ejecutivo') {
     tabs.gerencia && (tabs.gerencia.style.display = 'none');
     tabs.director && (tabs.director.style.display = 'none');
+    tabs.divisas  && (tabs.divisas.style.display  = 'none');
+    tabs.marcas   && (tabs.marcas.style.display   = 'none');
     tabs.resumen  && (tabs.resumen.style.display  = 'none');
     showPage('ejecutivo', tabs.ejecutivo);
   } else if(role === 'director') {
     tabs.gerencia && (tabs.gerencia.style.display = 'none');
+    tabs.ejecutivo&& (tabs.ejecutivo.style.display= 'none');
     tabs.resumen  && (tabs.resumen.style.display  = 'none');
     showPage('director', tabs.director);
   } else {
