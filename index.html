@@ -579,15 +579,15 @@ function doLogin() {
   if(lbl) lbl.textContent = '📂 Cargar Carpeta';
 
   // Mostrar mensaje de bienvenida en upload zone
-  const uz = document.getElementById('upload-zone-g');
-  if(uz) {
+  const uzD = document.getElementById('upload-zone-g');
+  if(uzD) {
     const roleMsg = {
       gerencia: 'Carga la carpeta ÁREA COMERCIAL - FORECAST 2026 para ver todos los datos',
       gerencia_director: 'Carga la carpeta ÁREA COMERCIAL - FORECAST 2026 para ver todos los datos',
       director: `Carga tu carpeta Grupo ${CURRENT_USER.directorGroup} para ver tu equipo`,
       ejecutivo: 'Carga tu archivo Excel para ver tu forecast'
     };
-    const msgEl = uz.querySelector('p');
+    const msgEl = uzD.querySelector('p');
     if(msgEl) msgEl.textContent = roleMsg[CURRENT_USER.role] || 'Selecciona la carpeta para continuar';
   }
 }
@@ -1368,13 +1368,13 @@ document.getElementById('file-input').addEventListener('change', function(e){
 });
 
 // Drag & drop — acepta tanto carpeta como archivos
-const uz = document.getElementById('upload-zone-g');
-if(uz){
-  uz.addEventListener('dragover', e=>{e.preventDefault();uz.classList.add('drag');});
-  uz.addEventListener('dragleave', ()=>uz.classList.remove('drag'));
-  uz.addEventListener('drop', async e=>{
+const uzDragDrop = document.getElementById('upload-zone-g');
+if(uzDragDrop){
+  uzDragDrop.addEventListener('dragover', e=>{e.preventDefault();uzDragDrop.classList.add('drag');});
+  uzDragDrop.addEventListener('dragleave', ()=>uzDragDrop.classList.remove('drag'));
+  uzDragDrop.addEventListener('drop', async e=>{
     e.preventDefault();
-    uz.classList.remove('drag');
+    uzDragDrop.classList.remove('drag');
     const items = Array.from(e.dataTransfer.items||[]);
     
     // Intentar leer como carpeta via FileSystemAPI
@@ -1440,8 +1440,6 @@ function finalizeLoad(){
   }
   TRM=getTRM();
   // Asegurar visibilidad correcta sin importar el flujo que llamó
-  const uz = document.getElementById('upload-zone-g');
-  if(uz) uz.style.display='none';
   const gc = document.getElementById('gerencia-content');
   if(gc) gc.style.display='block';
   const hs = document.getElementById('hoy-strip');
