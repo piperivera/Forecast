@@ -450,6 +450,12 @@ function finalizeLoad(){
   const execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
   document.getElementById('file-count-hd').textContent=
     visibleData.length+' negocios · '+dirs.length+' dir · '+execsWithData.length+' ejecutivos con datos';
+  // Status header
+  const dirs=[...new Set(ALL_DATA.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
+  const execs=[...new Set(ALL_DATA.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
+  const execsWithData = [...new Set(ALL_DATA.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
+  document.getElementById('file-count-hd').textContent=
+    ALL_DATA.length+' negocios · '+dirs.length+' dir · '+execsWithData.length+' ejecutivos con datos';
   const now = new Date();
   document.getElementById('last-update-hd').textContent=
     'Actualizado: '+now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+' · '+
@@ -472,6 +478,7 @@ function finalizeLoad(){
   const selDir=document.getElementById('sel-director');
   const dirsForSel=[...new Set([
     ...visibleData.map(r=>(r['DIRECTOR']||'').trim()),
+    ...ALL_DATA.map(r=>(r['DIRECTOR']||'').trim()),
     ...Object.keys(LOADED_FILES_BY_DIR||{}).map(d=>d.trim())
   ].filter(Boolean))].sort();
   selDir.innerHTML=dirsForSel.map(d=>`<option value="${d}">${d}</option>`).join('');
@@ -493,6 +500,7 @@ function getVisibleData() {
   }
   if(role === 'ejecutivo') {
     return ALL_DATA.filter(r => namesMatch(r['COMERCIAL'], name));
+    return ALL_DATA.filter(r => (r['COMERCIAL']||'').trim().toLowerCase() === (name||'').trim().toLowerCase());
   }
   return ALL_DATA; // gerencia ve todo
 }
@@ -1465,6 +1473,7 @@ async function loadEjecutivoFile(siteId) {
       const d = await r.json();
       if(!d.value) continue;
       const file = d.value.find(f => namesMatch(f.name, CURRENT_USER.name));
+      const file = d.value.find(f => f.name.toLowerCase().replace(/\.xlsx?$/i,'').trim() === CURRENT_USER.name.toLowerCase().trim());
       if(file) {
         const dirName = folder.replace(/^(Grupo|Gupo)\s+/i,'').trim();
         if(!LOADED_FILES_BY_DIR[dirName]) LOADED_FILES_BY_DIR[dirName] = [];
@@ -1536,6 +1545,7 @@ function applyRoleTabs() {
   } else if(role === 'director') {
     tabs.gerencia && (tabs.gerencia.style.display = 'none');
     tabs.ejecutivo&& (tabs.ejecutivo.style.display= 'none');
+    tabs.resumen  && (tabs.resumen.style.display  = 'none');
     showPage('director', tabs.director);
   } else {
     // gerencia / gerencia_director — ven todo
