@@ -443,29 +443,13 @@ function finalizeLoad(){
   const hs = document.getElementById('hoy-strip');
   if(hs) hs.style.display='block';
 
-  // Status header (según visibilidad del rol)
+  // Status header
   const visibleData = getVisibleData();
-  var directorList=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
-  var executiveList=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
-  var execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
-  document.getElementById('file-count-hd').textContent=
-    visibleData.length+' negocios · '+directorList.length+' dir · '+execsWithData.length+' ejecutivos con datos';
-  const directorList=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
-  const executiveList=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
-  const execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
-  document.getElementById('file-count-hd').textContent=
-    visibleData.length+' negocios · '+directorList.length+' dir · '+execsWithData.length+' ejecutivos con datos';
-  const dirs=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
-  const execs=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
+  const dirs = [...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
+  const execs = [...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
   const execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
   document.getElementById('file-count-hd').textContent=
     visibleData.length+' negocios · '+dirs.length+' dir · '+execsWithData.length+' ejecutivos con datos';
-  // Status header
-  const dirs=[...new Set(ALL_DATA.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
-  const execs=[...new Set(ALL_DATA.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
-  const execsWithData = [...new Set(ALL_DATA.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
-  document.getElementById('file-count-hd').textContent=
-    ALL_DATA.length+' negocios · '+dirs.length+' dir · '+execsWithData.length+' ejecutivos con datos';
   const now = new Date();
   document.getElementById('last-update-hd').textContent=
     'Actualizado: '+now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+' · '+
@@ -495,7 +479,6 @@ function finalizeLoad(){
   
   const execsFromFiles2=Object.values(LOADED_FILES_BY_DIR||{}).flat()
     .map(f=>f.name.replace(/\.(xlsx|xls)$/i,'').trim()).filter(Boolean);
-  const allExecsForSel=[...new Set([...executiveList,...execsFromFiles2])].sort();
   const allExecsForSel=[...new Set([...execs,...execsFromFiles2])].sort();
   const selEj=document.getElementById('sel-ejecutivo');
   selEj.innerHTML=allExecsForSel.map(e=>`<option value="${e}">${e}</option>`).join('');
@@ -510,7 +493,6 @@ function getVisibleData() {
     return ALL_DATA.filter(r => (r['DIRECTOR']||'').trim() === (directorGroup||'').trim());
   }
   if(role === 'ejecutivo') {
-    return ALL_DATA.filter(r => namesMatch(r['COMERCIAL'], name));
     return ALL_DATA.filter(r => (r['COMERCIAL']||'').trim().toLowerCase() === (name||'').trim().toLowerCase());
   }
   return ALL_DATA; // gerencia ve todo
@@ -1483,7 +1465,6 @@ async function loadEjecutivoFile(siteId) {
       );
       const d = await r.json();
       if(!d.value) continue;
-      const file = d.value.find(f => namesMatch(f.name, CURRENT_USER.name));
       const file = d.value.find(f => f.name.toLowerCase().replace(/\.xlsx?$/i,'').trim() === CURRENT_USER.name.toLowerCase().trim());
       if(file) {
         const dirName = folder.replace(/^(Grupo|Gupo)\s+/i,'').trim();
