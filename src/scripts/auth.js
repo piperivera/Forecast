@@ -6,6 +6,7 @@ var CURRENT_USER = null;
 var SP_TOKEN     = null;
 var msalApp      = null;
 
+var AZURE_CONFIG = window.AZURE_CONFIG || {
 const AZURE_CONFIG = {
   clientId:  '4a2b9726-2736-4f72-9e7e-c64cfdc80253',
   tenantId:  'e6805558-f5bb-444c-8af2-5f3a4d6dd3fc',
@@ -13,6 +14,7 @@ const AZURE_CONFIG = {
   siteUrl:   'https://provexpress.sharepoint.com/sites/ProvexpressIntranet',
   driveBase: 'Documentos compartidos/COMERCIAL/FORECAST 2026',
 };
+window.AZURE_CONFIG = AZURE_CONFIG;
 
 function initMsalApp() {
   if(typeof msal === 'undefined') return false;

@@ -445,6 +445,11 @@ function finalizeLoad(){
 
   // Status header (según visibilidad del rol)
   const visibleData = getVisibleData();
+  var directorList=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
+  var executiveList=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
+  var execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
+  document.getElementById('file-count-hd').textContent=
+    visibleData.length+' negocios · '+directorList.length+' dir · '+execsWithData.length+' ejecutivos con datos';
   const directorList=[...new Set(visibleData.map(r=>(r['DIRECTOR']||'').trim()).filter(Boolean))].sort();
   const executiveList=[...new Set(visibleData.map(r=>r['COMERCIAL']||'').filter(Boolean))].sort();
   const execsWithData = [...new Set(visibleData.map(r=>(r['COMERCIAL']||'').trim()).filter(Boolean))];
