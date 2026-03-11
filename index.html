@@ -10,11 +10,10 @@
 
 <!-- Microsoft Authentication Library -->
 <script src="src/scripts/auth.js?v=20260311b"></script>
-<script src="src/scripts/auth.js?v=20260311"></script>
-<script src="src/scripts/auth.js"></script>
 
 </head>
 <body>
+<div class="noise" aria-hidden="true"></div>
 
 <!-- HEADER -->
 <header>
@@ -40,10 +39,6 @@
         <div style="font-size:9px;color:var(--text2);font-family:var(--font-display)" id="last-update-hd"></div>
       </div>
     </div>
-    <button id="btn-reload" class="btn-load" onclick="loadFolderFromSharePoint()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      <span id="btn-reload-txt">🔄 Cargar datos</span>
-    </button>
     <div id="user-badge" style="display:none;align-items:center;gap:8px;padding:5px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);position:relative">
       <div id="user-avatar" style="width:26px;height:26px;border-radius:50%;background:var(--corp-blue2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:10px;font-weight:700;color:#fff"></div>
       <div>
@@ -67,8 +62,6 @@
         <button onclick="switchView('ejecutivo','Angela')" class="view-opt-btn" data-view="ej">👤 Ejecutivo (demo)</button>
       </div>
     </div>
-    <input type="file" id="folder-input" webkitdirectory mozdirectory directory style="display:none">
-    <input type="file" id="file-input" accept=".xlsx,.xls" multiple style="display:none">
   </div>
 </header>
 
@@ -82,42 +75,11 @@
   <button id="tab-resumen" class="nav-btn" onclick="showPage('resumen',this)">📊 Resumen Total</button>
 </nav>
 
+<main class="app">
 <!-- ══════════════════════════════════
      PAGE: GERENCIA GENERAL
 ══════════════════════════════════ -->
 <div class="page active" id="page-gerencia">
-  <div id="upload-zone-g" class="upload-zone" onclick="document.getElementById('folder-input').click()">
-    <div class="upload-icon">🗂️</div>
-<div id="reload-bar" style="display:none;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(27,43,140,.15),rgba(107,63,160,.08));border:1px solid rgba(107,63,160,.2);border-radius:12px;padding:14px 20px;margin-bottom:20px">
-  <div style="display:flex;align-items:center;gap:12px">
-    <div style="width:8px;height:8px;border-radius:50%;background:var(--corp-green);box-shadow:0 0 8px var(--corp-green);animation:pulse 2s infinite"></div>
-    <span id="reload-info" style="font-family:var(--font-display);font-size:11px;color:var(--text2);letter-spacing:.5px">Datos cargados</span>
-  </div>
-  <button onclick="loadFolderFromSharePoint()" style="display:flex;align-items:center;gap:6px;padding:7px 16px;background:rgba(45,79,214,.15);border:1px solid rgba(45,79,214,.3);color:var(--corp-blue2);border-radius:8px;font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.8px;cursor:pointer;transition:var(--transition);" onmouseover="this.style.background='rgba(45,79,214,.25)'" onmouseout="this.style.background='rgba(45,79,214,.15)'">
-    ↺ RECARGAR DATOS
-  </button>
-</div>
-    <div class="upload-title">Selecciona la carpeta FORECAST 2026</div>
-    <div class="upload-sub">
-      Haz clic aquí o arrastra la carpeta raíz del forecast<br>
-      El sistema detecta automáticamente cada carpeta de director y carga todos los ejecutivos
-    </div>
-    <div style="margin-top:18px;display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center">
-      <span class="upload-hint" onclick="event.stopPropagation();document.getElementById('folder-input').click()">📂 Seleccionar Carpeta (recomendado)</span>
-      <span class="upload-hint" style="opacity:.6" onclick="event.stopPropagation();document.getElementById('file-input').click()">📄 O archivos .xlsx sueltos</span>
-    </div>
-    <div style="margin-top:16px;font-size:10px;color:var(--text2);font-family:var(--font-display);letter-spacing:.5px">
-      Estructura esperada: <span style="color:var(--corp-cyan)">FORECAST 2026 / Grupo [Director] / [Ejecutivo].xlsx</span>
-    </div>
-    <div id="load-progress" style="display:none;margin-top:20px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px" id="load-status">Leyendo archivos...</div>
-      <div style="background:var(--border);border-radius:4px;height:4px;overflow:hidden;max-width:300px;margin:0 auto">
-        <div id="load-bar" style="height:100%;background:linear-gradient(90deg,var(--corp-blue),var(--corp-cyan));width:0%;transition:width .3s;border-radius:4px"></div>
-      </div>
-    </div>
-    <div id="folder-structure" style="display:none;margin-top:20px;text-align:left;max-width:520px;margin-left:auto;margin-right:auto"></div>
-  </div>
-
   <!-- Monto del día -->
   <div id="hoy-strip" style="display:none">
     <div class="hoy-strip">
@@ -366,9 +328,9 @@
   </div>
 </div>
 
+</main>
+
 <script src="src/scripts/main.js?v=20260311b"></script>
-<script src="src/scripts/main.js?v=20260311"></script>
-<script src="src/scripts/main.js"></script>
 
 
 <!-- Sin datos precargados — cargar carpeta FORECAST 2026 -->

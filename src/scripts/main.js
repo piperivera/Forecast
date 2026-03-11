@@ -344,74 +344,12 @@ async function processFiles(files){
     const ov = document.getElementById('load-overlay');
     if(ov) ov.style.display='none';
     // Asegurarse que el dashboard esté visible
-    document.getElementById('upload-zone-g').style.display='none';
+    const uz = document.getElementById('upload-zone-g');
+    if(uz) uz.style.display='none';
     document.getElementById('gerencia-content').style.display='block';
     document.getElementById('hoy-strip').style.display='block';
     finalizeLoad();
   }, 1200);
-}
-
-// Evento: carpeta seleccionada (fallback manual)
-document.getElementById('folder-input').addEventListener('change', function(e){
-  const files = Array.from(e.target.files);
-  if(!files.length) return;
-  processFiles(files);
-});
-
-// Evento: archivos sueltos
-document.getElementById('file-input').addEventListener('change', function(e){
-  const files = Array.from(e.target.files);
-  if(!files.length) return;
-  processFiles(files);
-});
-
-// Drag & drop — acepta tanto carpeta como archivos
-const uzDragDrop = document.getElementById('upload-zone-g');
-if(uzDragDrop){
-  uzDragDrop.addEventListener('dragover', e=>{e.preventDefault();uzDragDrop.classList.add('drag');});
-  uzDragDrop.addEventListener('dragleave', ()=>uzDragDrop.classList.remove('drag'));
-  uzDragDrop.addEventListener('drop', async e=>{
-    e.preventDefault();
-    uzDragDrop.classList.remove('drag');
-    const items = Array.from(e.dataTransfer.items||[]);
-    
-    // Intentar leer como carpeta via FileSystemAPI
-    if(items.length && items[0].webkitGetAsEntry){
-      const allFiles = [];
-      let pending = items.length;
-      const readEntry = (entry, path='')=>{
-        return new Promise(res=>{
-          if(entry.isFile){
-            entry.file(f=>{
-              // Agregar path relativo manualmente
-              Object.defineProperty(f,'webkitRelativePath',{value: path+'/'+f.name, writable:false});
-              if(/\.(xlsx|xls)$/i.test(f.name)) allFiles.push(f);
-              res();
-            });
-          } else if(entry.isDirectory){
-            const reader = entry.createReader();
-            reader.readEntries(async entries=>{
-              for(const en of entries) await readEntry(en, path+'/'+entry.name);
-              res();
-            });
-          } else res();
-        });
-      };
-      for(const item of items){
-        const entry = item.webkitGetAsEntry();
-        if(entry) await readEntry(entry, entry.name);
-      }
-      if(allFiles.length) processFiles(allFiles);
-      else {
-        // Fallback a files
-        const files = Array.from(e.dataTransfer.files);
-        processFiles(files);
-      }
-    } else {
-      const files = Array.from(e.dataTransfer.files);
-      processFiles(files);
-    }
-  });
 }
 
 // TRM change
