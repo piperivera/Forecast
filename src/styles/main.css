@@ -69,10 +69,10 @@ header{
 }
 .logo-plate{
   display:flex;align-items:center;
-  padding:6px 10px;border-radius:10px;
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:0 8px 20px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05);
+  padding:6px 12px;border-radius:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,.18));
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 10px 22px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.2);
 }
 .logo-img{
   height:24px;width:auto;max-width:220px;display:block;
