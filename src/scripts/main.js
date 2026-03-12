@@ -431,7 +431,13 @@ function getVisibleData() {
     return ALL_DATA.filter(r => (r['DIRECTOR']||'').trim() === (directorGroup||'').trim());
   }
   if(role === 'ejecutivo') {
-    return ALL_DATA.filter(r => (r['COMERCIAL']||'').trim().toLowerCase() === (name||'').trim().toLowerCase());
+    const targetName = getExecTargetName();
+    const targetNorm = normalizePersonName(targetName);
+    return ALL_DATA.filter(r => {
+      const execName = (r['COMERCIAL']||'').trim();
+      const execNorm = normalizePersonName(execName);
+      return execNorm === targetNorm || namesMatch(execName, targetName);
+    });
   }
   return ALL_DATA; // gerencia ve todo
 }
@@ -866,7 +872,9 @@ function initials(name){return name.split(' ').slice(0,2).map(w=>w[0]).join('');
 function renderEjecutivo(){
   const ALL_DATA = getVisibleData();
   if(!ALL_DATA.length) return;
-  const ej=document.getElementById('sel-ejecutivo').value;
+  const role = CURRENT_USER ? CURRENT_USER.role : null;
+  const targetName = role === 'ejecutivo' ? getExecTargetName() : '';
+  const selEj = document.getElementById('sel-ejecutivo');
   const mes=document.getElementById('sel-ej-mes').value;
   const est=document.getElementById('sel-ej-estado').value;
   const trm=getTRM();
@@ -877,7 +885,19 @@ function renderEjecutivo(){
   const execsFromFiles = Object.values(LOADED_FILES_BY_DIR||{}).flat()
     .map(f=>f.name.replace(/\.(xlsx|xls)$/i,'').trim());
   const allExecs = [...new Set([...execsFromData, ...execsFromFiles])].sort();
-  const execs = allExecs;
+  if(selEj){
+    if(role === 'ejecutivo' && targetName){
+      selEj.innerHTML = `<option value="${targetName}">${targetName}</option>`;
+      selEj.value = targetName;
+    } else {
+      const current = selEj.value;
+      selEj.innerHTML = allExecs.map(e=>`<option value="${e}">${e}</option>`).join('');
+      if(current && allExecs.includes(current)) selEj.value = current;
+      else if(allExecs[0]) selEj.value = allExecs[0];
+    }
+  }
+  const ej = (role === 'ejecutivo' && targetName) ? targetName : (selEj ? selEj.value : '');
+  const execs = (role === 'ejecutivo' && targetName) ? [targetName] : allExecs;
   document.getElementById('persona-grid').innerHTML=execs.map((e,i)=>{
     const ed=ALL_DATA.filter(r=>(r['COMERCIAL']||'').trim()===e);
     const cop=ed.reduce((s,r)=>s+toCOP(r),0);
