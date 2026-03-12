@@ -6,6 +6,70 @@ let TRM = 4150;
 let TRM_READY = false;
 let SELECTED_EXEC_BY_DIR = {};
 
+const TRM_CACHE_KEY = 'trm_last';
+const TRM_DATE_KEY = 'trm_date';
+
+function loadCachedTRM(){
+  try {
+    const v = parseFloat(localStorage.getItem(TRM_CACHE_KEY));
+    if(v && v > 100){
+      TRM = v;
+      TRM_READY = true;
+      const inp = document.getElementById('trm-input');
+      if(inp) inp.value = Number(TRM).toFixed(2);
+    }
+  } catch(_) {}
+}
+function cacheTRM(val, dateStr){
+  try {
+    if(val && val > 100){
+      localStorage.setItem(TRM_CACHE_KEY, String(val));
+      if(dateStr) localStorage.setItem(TRM_DATE_KEY, String(dateStr));
+    }
+  } catch(_) {}
+}
+async function fetchText(url, timeoutMs){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), timeoutMs || 8000);
+  try {
+    const r = await fetch(url, {cache:'no-store', signal: ctrl.signal});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+async function fetchFirstText(urls, timeoutMs){
+  for(const u of urls){
+    try { return await fetchText(u, timeoutMs); } catch(_) {}
+  }
+  return '';
+}
+function extractTRMFromText(text){
+  const reHtml = new RegExp('<span class=\"valor-indicador-principal\">\\s*([0-9.]+,[0-9]{2})\\s*COP\\/USD<\\/span>[\\s\\S]*?<span class=\"fecha-indicador-principal\">\\s*(\\d{2}\\/\\d{2}\\/\\d{4})<\\/span>');
+  const m = text.match(reHtml);
+  if(m){
+    return {value: parseFloat(m[1].replace(/\\./g,'').replace(',','.')), date: m[2]};
+  }
+  const rePlain = new RegExp('([0-9.]+,[0-9]{2})\\s*COP\\/USD');
+  const mp = text.match(rePlain);
+  if(mp){
+    const dm = text.match(/(\\d{2}\\/\\d{2}\\/\\d{4})/);
+    return {value: parseFloat(mp[1].replace(/\\./g,'').replace(',','.')), date: dm ? dm[1] : ''};
+  }
+  return null;
+}
+function extractTRMFromSDMX(text){
+  const mv = text.match(/ObsValue[^>]*value=\"([0-9.]+)\"/);
+  if(!mv) return null;
+  const md = text.match(/ObsDimension[^>]*value=\"(\\d{8})\"/);
+  let dateStr = '';
+  if(md && md[1] && md[1].length===8){
+    dateStr = md[1].substring(6,8)+'/'+md[1].substring(4,6)+'/'+md[1].substring(0,4);
+  }
+  return {value: parseFloat(mv[1]), date: dateStr};
+}
+
+loadCachedTRM();
+
 async function fetchTRM() {
   const setTRM = t => {
     TRM = t;
@@ -13,35 +77,35 @@ async function fetchTRM() {
     const inp = document.getElementById('trm-input');
     if(inp) inp.value = Number(TRM).toFixed(2);
     if(ALL_DATA.length) renderAll();
+    cacheTRM(TRM, window._trmDate);
     console.log('[TRM]', TRM);
   };
   // Source 0: Portal Banrep (HTML) para calzar con el valor publicado
   try {
-    const pageUrl = 'https://totoro.banrep.gov.co/estadisticas-economicas/?cb=' + Date.now();
-    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(pageUrl);
-    const r0 = await fetch(proxyUrl, {cache:'no-store'});
-    const html = await r0.text();
-    const re = new RegExp('<span class=\"valor-indicador-principal\">\\s*([0-9.]+,[0-9]{2})\\s*COP\\/USD<\\/span>[\\s\\S]*?<span class=\"fecha-indicador-principal\">\\s*(\\d{2}\\/\\d{2}\\/\\d{4})<\\/span>');
-    const m = html.match(re);
-    if(m){
-      const t0 = parseFloat(m[1].replace(/\./g,'').replace(',','.'));
-      if(t0 > 100) { window._trmDate = m[2]; setTRM(t0); return; }
+    const base = 'https://totoro.banrep.gov.co/estadisticas-economicas/?cb=' + Date.now();
+    const urls = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(base),
+      'https://r.jina.ai/http://totoro.banrep.gov.co/estadisticas-economicas/?cb=' + Date.now()
+    ];
+    const html = await fetchFirstText(urls, 9000);
+    const res = html ? extractTRMFromText(html) : null;
+    if(res && res.value > 100){
+      window._trmDate = res.date || window._trmDate;
+      setTRM(res.value); return;
     }
   } catch(e0) { console.warn('[TRM] banrep portal failed', e0.message); }
   // Source 1: Banco de la República (SDMX). Banrep no expone CORS, usamos proxy raw.
   try {
     const banrepUrl = 'https://totoro.banrep.gov.co/nsi-jax-ws/rest/data/ESTAT,DF_TRM_DAILY_LATEST,1.0/all/ALL/?dimensionAtObservation=TIME_PERIOD&detail=full';
-    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(banrepUrl);
-    const r1 = await fetch(proxyUrl, {cache:'no-store'});
-    const xmlTxt = await r1.text();
-    const xml = new DOMParser().parseFromString(xmlTxt, 'text/xml');
-    const obs = xml.getElementsByTagName('generic:ObsValue')[0] || xml.getElementsByTagName('ObsValue')[0];
-    const dim = xml.getElementsByTagName('generic:ObsDimension')[0] || xml.getElementsByTagName('ObsDimension')[0];
-    const t1 = obs ? parseFloat(obs.getAttribute('value')) : NaN;
-    const d1 = dim ? dim.getAttribute('value') : '';
-    if(t1 > 100) {
-      if(d1 && d1.length === 8) window._trmDate = d1.substring(6,8)+'/'+d1.substring(4,6)+'/'+d1.substring(0,4);
-      setTRM(t1); return;
+    const urls = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(banrepUrl + '&cb=' + Date.now()),
+      'https://r.jina.ai/http://totoro.banrep.gov.co/nsi-jax-ws/rest/data/ESTAT,DF_TRM_DAILY_LATEST,1.0/all/ALL/?dimensionAtObservation=TIME_PERIOD&detail=full'
+    ];
+    const xmlTxt = await fetchFirstText(urls, 9000);
+    const res = xmlTxt ? extractTRMFromSDMX(xmlTxt) : null;
+    if(res && res.value > 100){
+      if(res.date) window._trmDate = res.date;
+      setTRM(res.value); return;
     }
   } catch(e1) { console.warn('[TRM] banrep sdmx failed', e1.message); }
   console.warn('[TRM] banrep sources failed, keeping current TRM', TRM);
