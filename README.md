@@ -1,46 +1,35 @@
-# ForeCast
+# Forecast 2026 (Provexpress)
 
-## Estructura recomendada del proyecto
+Dashboard comercial para seguimiento de forecast 2026. Es un sitio estatico que
+se autentica con Microsoft 365 (MSAL) y carga archivos Excel desde SharePoint.
 
-Sí, para este tipo de dashboard es mejor separar el proyecto por responsabilidad en lugar de mantener toda la lógica en `index.html`.
+## Funcionalidades
+- Carga automatica desde SharePoint (Microsoft Graph).
+- Vistas por rol: gerencia, director y ejecutivo.
+- Panel de cambio de vista habilitado solo para `especialista.preventa`.
 
-```text
-ForeCast/
-  index.html
-  src/
-    styles/
-      main.css
-    scripts/
-      state.js          # variables globales: ALL_DATA, CURRENT_USER, TRM
-      config.js         # ROLES, COLORS, KEY_MAP, MES_LABELS
-      auth.js           # MSAL, login, showUserBadge, switchView
-      data-loader.js    # loadFolderFromSharePoint, parseXlsx, fetchTRM
-      render/
-        kpis.js         # renderGerencia, renderKPIs
-        charts.js       # renderEvoChart, renderDonut, evoSVG
-        tables.js       # buildTable, renderGerenciaEstadoTables
-        director.js     # renderDirector
-        ejecutivo.js    # renderEjecutivo
-        divisas.js      # renderDivisas
-        marcas.js       # renderMarcas
-      utils.js          # abr, parseMonto, parseFecha, toCOP, fmtCOP
-      main.js           # DOMContentLoaded, navegación, renderAll
+## Origen de datos
+Ruta esperada en SharePoint (Documentos compartidos):
+
+```
+COMERCIAL/FORECAST 2026/Grupo [Director]/[Ejecutivo].xlsx
 ```
 
-## Orden sugerido de migración
+Reglas del archivo:
+- Se toma la primera hoja que contenga "Gerencia" o "Comercial".
+- La fila de encabezados se detecta por la columna "CLIENTE".
+- Los nombres de columnas se normalizan internamente (por ejemplo MONTO VENTA
+  CLIENTE, MONEDA 2, FECHA DIA/MES/ANO, TRM REFERENCIA, LINEA DE PRODUCTO).
 
-1. Mover CSS embebido a `src/styles/main.css`.
-2. Mover JS embebido a `src/scripts/main.js`.
-3. Extraer constantes a `config.js` y estado a `state.js`.
-4. Extraer carga/parseo a `data-loader.js`.
-5. Dividir render por módulos en `src/scripts/render/`.
-6. Dejar `main.js` como orquestador (eventos + render global).
+## Configuracion clave
+- `src/scripts/auth.js`: MSAL, roles y mapa correo -> nombre de Excel.
+- `src/scripts/main.js`: carga de archivos, render y filtros.
 
-## Reglas prácticas
+## Ejecucion local
+Abrir `index.html` en un navegador con acceso a internet. Requiere cuentas
+corporativas para autenticacion en Microsoft 365.
 
-- `index.html` debe tener solo estructura y referencias a CSS/JS.
-- Los módulos de `render/` no deben modificar estado global directamente.
-- `utils.js` solo contiene funciones puras reutilizables.
-- `state.js` centraliza el estado mutable.
-
-Esta organización mejora mantenimiento, pruebas y escalabilidad.
+## Notas
+- No hay pruebas automatizadas.
+- Si un ejecutivo no ve datos, el nombre del Excel debe coincidir con el mapa
+  de correos o con el nombre del archivo en SharePoint.
