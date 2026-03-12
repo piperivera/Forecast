@@ -19,7 +19,8 @@ async function fetchTRM() {
     const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(pageUrl);
     const r0 = await fetch(proxyUrl, {cache:'no-store'});
     const html = await r0.text();
-    const m = html.match(/<span class="valor-indicador-principal">\s*([0-9.]+,[0-9]{2})\s*COP\/USD<\/span>[\s\S]*?<span class="fecha-indicador-principal">\s*(\d{2}\/\d{2}\/\d{4})<\/span>/);
+    const re = new RegExp('<span class=\"valor-indicador-principal\">\\s*([0-9.]+,[0-9]{2})\\s*COP\\/USD<\\/span>[\\s\\S]*?<span class=\"fecha-indicador-principal\">\\s*(\\d{2}\\/\\d{2}\\/\\d{4})<\\/span>');
+    const m = html.match(re);
     if(m){
       const t0 = parseFloat(m[1].replace(/\./g,'').replace(',','.'));
       if(t0 > 100) { window._trmDate = m[2]; setTRM(t0); return; }
