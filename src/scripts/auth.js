@@ -92,6 +92,48 @@ const ROLES = {
   }
 };
 
+// Mapea correo -> nombre de archivo Excel del ejecutivo
+const EXECUTIVO_BY_EMAIL = {
+  'dafne.ruiz@provexpress.com.co': 'Dafne Lizeth Ruiz',
+  'diana.castro@provexpress.com.co': 'Diana Catalina Castro',
+  'jessica.valencia@provexpress.com.co': 'Jessica Lorena Valencia',
+  'jhonatan.acevedo@provexpress.com.co': 'Jhonatan Acevedo',
+  'camilo.hernandez@provexpress.com.co': 'Jhonatan Camilo Hernández',
+  'juan.velasquez@provexpress.com.co': 'Juan Camilo Velásquez',
+  'astrid.jimenez@provexpress.com.co': 'Leidy Astrid Jiménez',
+  'maria.briceno@provexpress.com.co': 'María Paola Briceño',
+  'yeison.urrego@provexpress.com.co': 'Yeison Urrego',
+  'alejandra.velasquez@provexpress.com.co': 'Alejandra Velásquez',
+  'angela.torres@provexpress.com.co': 'Angela Torres',
+  'cesar.cespedes@provexpress.com.co': 'César Cespedes',
+  'fernando.quinonez@provexpress.com.co': 'Fernando Alberto Quiñonez',
+  'jenny.gonzalez@provexpress.com.co': 'Jenny González',
+  'johanna.jaime@provexpress.com.co': 'Johanna Jaime Murcia',
+  'juan.martinez@provexpress.com.co': 'Juan David Martínez',
+  'mariela.ramirez@provexpress.com.co': 'Mariela Ramírez',
+  'rosa.mendoza@provexpress.com.co': 'Rosa María Mendoza',
+  'wilson.sanchez@provexpress.com.co': 'Wilson Fernando Sánchez',
+  'tatiana.parra@provexpress.com.co': 'Angie Tatiana Parra',
+  'claudia.triana@provexpress.com.co': 'Claudia Patricia Triana',
+  'dilma.cuesta@provexpress.com.co': 'Dilma Cuesta',
+  'andres.pena@provexpress.com.co': 'Freddy Andrés Peña',
+  'paola.garcia@provexpress.com.co': 'Gina Paola García',
+  'javier.cortes@provexpress.com.co': 'Javier Antonio Cortés',
+  'julieth.galindo@provexpress.com.co': 'Juliet Milena Galindo Fino',
+  'karen.carrillo@provexpress.com.co': 'Karent Carrillo',
+  'lington.linares@provexpress.com.co': 'Lington Linares',
+  'maria.cruz@provexpress.com.co': 'María Eugenia Cruz',
+  'mario.reyes@provexpress.com.co': 'Mario Reyes',
+  'daniel.galindo@provexpress.com.co': 'Daniel Galindo Girón',
+  'dayana.chala@provexpress.com.co': 'Dayana Chala',
+  'angelica.alvarez@provexpress.com.co': 'María Angélica Alvarez',
+  'rosmira.rojas@provexpress.com.co': 'Rosmira Rojas',
+  'yovanny.herrera@provexpress.com.co': 'Yovanny Herrera',
+  'andrea.vargas@provexpress.com.co': 'Yurany Andrea Vargas',
+};
+
+window.EXECUTIVO_BY_EMAIL = EXECUTIVO_BY_EMAIL;
+
 function getUserRole(email) {
   const e = (email||'').toLowerCase().trim();
   const isGerencia = ROLES.gerencia.includes(e);

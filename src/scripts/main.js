@@ -1391,6 +1391,12 @@ async function loadDirectorFolder(siteId, folderName) {
   }
 }
 
+function getExecTargetName() {
+  const email = (CURRENT_USER && CURRENT_USER.email || '').toLowerCase().trim();
+  const map = window.EXECUTIVO_BY_EMAIL || {};
+  return (map[email] || CURRENT_USER.name || '').trim();
+}
+
 async function loadEjecutivoFile(siteId) {
   const folders = ['Grupo Juan David Novoa','Grupo Maria Angelica Caballero','Grupo Oscar Beltran','Gupo Miller Romero'];
   for(const folder of folders) {
@@ -1403,7 +1409,10 @@ async function loadEjecutivoFile(siteId) {
       );
       const d = await r.json();
       if(!d.value) continue;
-      const file = d.value.find(f => f.name.toLowerCase().replace(/\.xlsx?$/i,'').trim() === CURRENT_USER.name.toLowerCase().trim());
+      const targetName = getExecTargetName();
+      const targetNorm = normalizePersonName(targetName);
+      const file = d.value.find(f => normalizePersonName(f.name) === targetNorm)
+        || d.value.find(f => namesMatch(f.name, targetName));
       if(file) {
         const dirName = folder.replace(/^(Grupo|Gupo)\s+/i,'').trim();
         if(!LOADED_FILES_BY_DIR[dirName]) LOADED_FILES_BY_DIR[dirName] = [];
