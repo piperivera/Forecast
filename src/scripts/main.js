@@ -83,8 +83,7 @@ async function fetchTRM() {
 
   // Source 1: datos.gov.co — API oficial Superfinanciera (CORS abierto, sin proxy)
   try {
-    const today = new Date().toISOString().substring(0, 10);
-    const url = `https://www.datos.gov.co/resource/32sa-8pi3.json?$where=vigenciadesde<%27${today}%27&$order=vigenciadesde%20DESC&$limit=1`;
+    const url = 'https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde DESC&$limit=1';
     const r1 = await fetch(url, { cache: 'no-store' });
     if(r1.ok) {
       const d1 = await r1.json();
